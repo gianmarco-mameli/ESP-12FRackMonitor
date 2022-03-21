@@ -6,8 +6,6 @@
 #include <Adafruit_SSD1306.h>
 #include "DHT.h"
 #include "secrets.h"
-// #include <iostream>   // std::cout
-// #include <string>     // std::string, std::stoi
 
 // led declaration
 const int RED = 14;
@@ -25,10 +23,10 @@ float h = 0;
 #define PIRPIN 13
 int pir = 0;
 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+// oled declaration
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define NUMFLAKES 10
 #define XPOS 0
@@ -97,7 +95,6 @@ int getPir(void)
 }
 
 void getDht(void) {
-  // delay(2000);
   h = dht.readHumidity();
   t = dht.readTemperature();
   if (isnan(h) || isnan(t) )
@@ -126,41 +123,28 @@ void showInfo(void)
   display.setTextSize(3);
   display.setCursor(8, 8);
   display.print(t);
-
   display.setTextSize(1);
   display.setCursor(8, 50);
   display.print(WiFi.localIP());
-
   display.display();
 }
-
 
 void connectWifi(void)
 {
   // display.drawRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
-  display.setTextSize(2);
-  display.setCursor(15, 10);
-  display.print("Connecting to Wifi");
-  // display.display();
   WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() == WL_CONNECTED)
   {
-    // Serial.print("Connected. IP: ");
-    // Serial.println(WiFi.localIP());
-    display.setCursor(15, 20);
-    display.print("Connected. IP: ");
-    display.println(WiFi.localIP());
-    // display.display();
+    Serial.print("Connected. IP: ");
+    Serial.println(WiFi.localIP());
   }
   else
   {
     Serial.println("Connection Failed!");
   }
-  // Serial.println("Connected to the WiFi network");
-  display.setCursor(15, 30);
-  display.println("Connected to the WiFi");
-  // display.display();
+  Serial.println("Connected to the WiFi network");
 }
+
 void callback(char *topic, byte *payload, unsigned int length) {
   String msg;
   for (int i = 0; i < length; i++) {
@@ -169,34 +153,17 @@ void callback(char *topic, byte *payload, unsigned int length) {
   // Serial.println(topic);
   // Serial.println(msg);
   if (strcmp(topic,r)==0) {
-    // if (msg == "1") {
-    //   digitalWrite(RED,HIGH);
-    //   Serial.println("Red on");
-    // } else {
-      // int value = stoi(msg);
-      analogWrite(RED,msg.toInt());
-    // }
+    analogWrite(RED,msg.toInt());
   }
   if (strcmp(topic,g)==0) {
-    // if (msg == "0") {
-    //   digitalWrite(GREEN,HIGH);
-    //   Serial.println("Green on");
-    // } else {
-      analogWrite(GREEN,msg.toInt());
-    // }
+    analogWrite(GREEN,msg.toInt());
   }
   if (strcmp(topic,b)==0) {
-    // if (msg == "0") {
-    //   digitalWrite(BLUE,HIGH);
-    //   Serial.println("Blue on");
-    // } else {
-      analogWrite(BLUE,msg.toInt());
-    // }
+    analogWrite(BLUE,msg.toInt());
   }
 }
 
 void InitMqtt() {
-    //connecting to a mqtt broker
     client.setServer(mqtt_broker, mqtt_port);
     client.setCallback(callback);
     Serial.println("Connecting to MQTT broker.....");
@@ -225,11 +192,12 @@ void setup()
   delay(2000);
   display.clearDisplay();
   connectWifi();
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+
   InitMqtt();
   pinMode(PIRPIN, INPUT);
   dht.begin();
-  // display.fillRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
-  // delay(2000);
 
   client.subscribe(r);
   client.subscribe(g);
