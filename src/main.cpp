@@ -131,18 +131,17 @@ void showInfo(void)
 
 void connectWifi(void)
 {
-  // display.drawRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  if (WiFi.waitForConnectResult() == WL_CONNECTED)
-  {
-    Serial.print("Connected. IP: ");
-    Serial.println(WiFi.localIP());
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
   }
-  else
-  {
-    Serial.println("Connection Failed!");
-  }
-  Serial.println("Connected to the WiFi network");
+  Serial.println(WiFi.localIP());
+  //The ESP8266 tries to reconnect automatically when the connection is lost
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
@@ -192,8 +191,6 @@ void setup()
   delay(2000);
   display.clearDisplay();
   connectWifi();
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(true);
 
   InitMqtt();
   pinMode(PIRPIN, INPUT);
