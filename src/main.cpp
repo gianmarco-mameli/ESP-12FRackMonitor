@@ -59,6 +59,7 @@ const char *motion = "rackmonitor/motion";
 const char *r = "rackmonitor/r";
 const char *g = "rackmonitor/g";
 const char *b = "rackmonitor/b";
+const char *status = "rackmonitor/status";
 
 WiFiClient espClient;
 String ip;
@@ -162,17 +163,19 @@ void callback(char *topic, byte *payload, unsigned int length) {
   }
 }
 
-void InitMqtt() {
+boolean InitMqtt() {
     client.setServer(mqtt_broker, mqtt_port);
     client.setCallback(callback);
     Serial.println("Connecting to MQTT broker.....");
     if (client.connect(client_id)) {
       Serial.println("MQTT broker connected");
+      client.publish(status, "connected");
     } else {
       Serial.print("failed with state ");
       Serial.print(client.state());
       delay(2000);
     }
+    return client.connected();
 }
 
 void setup()
@@ -203,18 +206,22 @@ void setup()
 
 void loop()
 {
-  client.loop();
-  getDht();
-  int pir = getPir();
-  delay(1000);
-  if (pir == 1)
-  {
-    showInfo();
-    display.clearDisplay();
-  }
-  else if (pir == 0)
-  {
-    display.display();
-    display.clearDisplay();
+  if (client.connected()) {
+    client.loop();
+    getDht();
+    int pir = getPir();
+    delay(1000);
+    if (pir == 1)
+    {
+      showInfo();
+      display.clearDisplay();
+    }
+    else if (pir == 0)
+    {
+      display.display();
+      display.clearDisplay();
+    }
+  } else {
+    InitMqtt();
   }
 }
