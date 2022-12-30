@@ -84,7 +84,6 @@ void write_temp(float temp, char C_F)
   display.display();
 }
 
-
 int getPir(void)
 {
   int pir = digitalRead(PIRPIN);
@@ -147,7 +146,7 @@ void connectWifi(void)
 
 void callback(char *topic, byte *payload, unsigned int length) {
   String msg;
-  for (int i = 0; i < length; i++) {
+  for (unsigned int i = 0; i < length; i++) {
     msg = msg + (char) payload[i];  // convert *byte to string
   }
   // Serial.println(topic);

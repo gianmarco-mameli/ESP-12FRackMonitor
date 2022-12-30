@@ -3,7 +3,7 @@
 import paho.mqtt.publish as mqtt  # pip install --upgrade paho-mqtt
 import os
 
-hostname = 'mosquitto.docker.local'
+hostname = '192.168.1.1'
 port = 1883
 qos=0
 retain=False
