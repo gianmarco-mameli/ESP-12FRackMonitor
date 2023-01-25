@@ -67,7 +67,6 @@ String ip;
 PubSubClient client(espClient);
 const char *client_id = "rackmonitor";
 
-
 void write_temp(float temp, char C_F)
 {
   // display.drawRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
@@ -88,25 +87,26 @@ int getPir(void)
 {
   int pir = digitalRead(PIRPIN);
   char *message = "";
-  itoa(pir,message,10);
-  client.publish(motion,message);
+  itoa(pir, message, 10);
+  client.publish(motion, message);
   // Serial.println(message);
   return pir;
 }
 
-void getDht(void) {
+void getDht(void)
+{
   h = dht.readHumidity();
   t = dht.readTemperature();
-  if (isnan(h) || isnan(t) )
+  if (isnan(h) || isnan(t))
   {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
   char *message = "";
-  dtostrf(t,4,2,message);
-  client.publish(temp,message);
-  itoa(h,message,10);
-  client.publish(hum,message);
+  dtostrf(t, 4, 2, message);
+  client.publish(temp, message);
+  itoa(h, message, 10);
+  client.publish(hum, message);
   // Serial.println(message);
 }
 
@@ -134,47 +134,57 @@ void connectWifi(void)
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print('.');
     delay(1000);
   }
   Serial.println(WiFi.localIP());
-  //The ESP8266 tries to reconnect automatically when the connection is lost
+  // The ESP8266 tries to reconnect automatically when the connection is lost
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
 }
 
-void callback(char *topic, byte *payload, unsigned int length) {
+void callback(char *topic, byte *payload, unsigned int length)
+{
   String msg;
-  for (unsigned int i = 0; i < length; i++) {
-    msg = msg + (char) payload[i];  // convert *byte to string
+  for (unsigned int i = 0; i < length; i++)
+  {
+    msg = msg + (char)payload[i]; // convert *byte to string
   }
   // Serial.println(topic);
   // Serial.println(msg);
-  if (strcmp(topic,r)==0) {
-    analogWrite(RED,msg.toInt());
+  if (strcmp(topic, r) == 0)
+  {
+    analogWrite(RED, msg.toInt());
   }
-  if (strcmp(topic,g)==0) {
-    analogWrite(GREEN,msg.toInt());
+  if (strcmp(topic, g) == 0)
+  {
+    analogWrite(GREEN, msg.toInt());
   }
-  if (strcmp(topic,b)==0) {
-    analogWrite(BLUE,msg.toInt());
+  if (strcmp(topic, b) == 0)
+  {
+    analogWrite(BLUE, msg.toInt());
   }
 }
 
-boolean InitMqtt() {
-    client.setServer(mqtt_broker, mqtt_port);
-    client.setCallback(callback);
-    Serial.println("Connecting to MQTT broker.....");
-    if (client.connect(client_id)) {
-      Serial.println("MQTT broker connected");
-      client.publish(status, "connected");
-    } else {
-      Serial.print("failed with state ");
-      Serial.print(client.state());
-      delay(2000);
-    }
-    return client.connected();
+boolean InitMqtt()
+{
+  client.setServer(mqtt_broker, mqtt_port);
+  client.setCallback(callback);
+  Serial.println("Connecting to MQTT broker.....");
+  if (client.connect(client_id))
+  {
+    Serial.println("MQTT broker connected");
+    client.publish(status, "connected");
+  }
+  else
+  {
+    Serial.print("failed with state ");
+    Serial.print(client.state());
+    delay(2000);
+  }
+  return client.connected();
 }
 
 void setup()
@@ -184,9 +194,11 @@ void setup()
   pinMode(BLUE, OUTPUT);
 
   Serial.begin(9600);
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
     Serial.println("SSD1306 allocation failed");
-    for(;;);
+    for (;;)
+      ;
   }
   // display.setRotation(2);
   display.display();
@@ -205,7 +217,8 @@ void setup()
 
 void loop()
 {
-  if (client.connected()) {
+  if (client.connected())
+  {
     client.loop();
     getDht();
     int pir = getPir();
@@ -220,7 +233,9 @@ void loop()
       display.display();
       display.clearDisplay();
     }
-  } else {
+  }
+  else
+  {
     InitMqtt();
   }
 }
