@@ -2,15 +2,26 @@
 #include <PubSubClient.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include "DHT.h"
-#include "secrets.h"
+#include "private.h"
+#include <string.h>
+#include <LiquidCrystal_I2C.h>
+
+// wifi
+const char ssid[] = SECRET_SSID;
+const char pass[] = SECRET_PASS;
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const char *mqtt_broker = "192.168.1.1";
+const int mqtt_port = 1883;
+
+const char *client_id = "rackmonitor";
 
 // led declaration
-const int RED = 14;
-const int GREEN = 12;
-const int BLUE = 15;
+#define RED 14
+#define GREEN 12
+#define BLUE 13
 
 // dht declaration
 #define DHTPIN 10
@@ -18,80 +29,46 @@ const int BLUE = 15;
 DHT dht(DHTPIN, DHTTYPE);
 float t = 0;
 float h = 0;
+char tBuffer[15];
+char hBuffer[15];
 
-// pir declaration
-#define PIRPIN 13
-int pir = 0;
+// lcd declaration
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+char line0[17];
+char line1[17];
 
-// oled declaration
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-#define NUMFLAKES 10
-#define XPOS 0
-#define YPOS 1
-#define DELTAY 2
-#define LOGO16_GLCD_HEIGHT 16
-#define LOGO16_GLCD_WIDTH 16
-static const unsigned char PROGMEM logo16_glcd_bmp[] =
-    {B00000000, B11000000,
-     B00000001, B11000000,
-     B00000001, B11000000,
-     B00000011, B11100000,
-     B11110011, B11100000,
-     B11111110, B11111000,
-     B01111110, B11111111,
-     B00110011, B10011111,
-     B00011111, B11111100,
-     B00001101, B01110000,
-     B00011011, B10100000,
-     B00111111, B11100000,
-     B00111111, B11110000,
-     B01111100, B11110000,
-     B01110000, B01110000,
-     B00000000, B00110000};
+char *message;
+
+const long interval = 200;
+unsigned long previousMillis = 0;
+
+bool messageIncoming = false;
+unsigned long messageStartTime = 0;
 
 // define mqtt topics
-const char *temp = "rackmonitor/temperature";
-const char *hum = "rackmonitor/humidity";
-const char *motion = "rackmonitor/motion";
-const char *r = "rackmonitor/r";
-const char *g = "rackmonitor/g";
-const char *b = "rackmonitor/b";
-const char *status = "rackmonitor/status";
+const char *t_temp = "rackmonitor/temperature";
+const char *t_hum = "rackmonitor/humidity";
+const char *t_r = "rackmonitor/r";
+const char *t_g = "rackmonitor/g";
+const char *t_b = "rackmonitor/b";
+const char *t_state = "rackmonitor/state";
+// const char *t_output = "rackmonitor/output";
+const char *t_name = "rackmonitor/name";
+const char *t_host = "rackmonitor/host";
+// const char *t_message = "rackmonitor/message";
+const char *t_status = "rackmonitor/status";
 
-WiFiClient espClient;
+const char *t_bcharge = "rpiusb/bcharge";
+const char *t_linev = "rpiusb/linev";
+const char *t_timeleft = "rpiusb/timeleft";
+
+const char *motion = "rackmotion/motion";
+
+int bcharge;
+int timeleft;
+int linev;
+
 String ip;
-
-PubSubClient client(espClient);
-const char *client_id = "rackmonitor";
-
-void write_temp(float temp, char C_F)
-{
-  // display.drawRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
-  display.setCursor(104, 3);
-  display.print("o");
-  display.setTextSize(2);
-  display.setCursor(112, 10);
-  display.print(C_F);
-  display.setTextSize(3);
-  display.setCursor(10, 6);
-  display.print(temp);
-  display.display();
-}
-
-int getPir(void)
-{
-  int pir = digitalRead(PIRPIN);
-  char *message = "";
-  itoa(pir, message, 10);
-  client.publish(motion, message);
-  // Serial.println(message);
-  return pir;
-}
 
 void getDht(void)
 {
@@ -102,37 +79,66 @@ void getDht(void)
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
-  char *message = "";
-  dtostrf(t, 4, 2, message);
-  client.publish(temp, message);
-  itoa(h, message, 10);
-  client.publish(hum, message);
+  dtostrf(t, 2, 1, tBuffer);
+  client.publish(t_temp, tBuffer);
+  itoa(h, hBuffer, 10);
+  client.publish(t_hum, hBuffer);
   // Serial.println(message);
 }
 
-void showInfo(void)
+void callback(char *topic, byte *payload, unsigned int length)
 {
-  // display.drawRect(1, 1, display.width() - 1, display.height() - 1, WHITE);
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
-  display.setCursor(102, 5);
-  display.print("o");
-  display.setTextSize(2);
-  display.setCursor(110, 12);
-  display.print("C");
-  display.setTextSize(3);
-  display.setCursor(8, 8);
-  display.print(t);
-  display.setTextSize(1);
-  display.setCursor(8, 50);
-  display.print(WiFi.localIP());
-  display.display();
+  char in_message[length];
+  unsigned int i = 0;
+  for (; i < length; i++)
+  {
+    in_message[i] = char(payload[i]);
+  }
+  in_message[i] = '\0';
+  messageIncoming = true;
+  messageStartTime = millis();
+  if (strcmp(topic, t_r) == 0)
+  {
+    analogWrite(RED, 255 - atoi(in_message));
+  }
+  if (strcmp(topic, t_g) == 0)
+  {
+    analogWrite(GREEN, 255 - atoi(in_message));
+  }
+  if (strcmp(topic, t_b) == 0)
+  {
+    analogWrite(BLUE, 255 - atoi(in_message));
+  }
+  if (strcmp(topic, t_bcharge) == 0)
+  {
+    // sprintf(line1, "%s", in_message);
+    bcharge = atoi(in_message);
+  }
+  if (strcmp(topic, t_timeleft) == 0)
+  {
+// sprintf(line1, "%16s", in_message);
+    timeleft = atoi(in_message);
+
+  }
+  if (strcmp(topic, t_linev) == 0)
+  {
+    // sprintf(line1, "%-16s", in_message);
+    linev = atoi(in_message);
+  }
+  if (strcmp(topic, t_name) == 0)
+  {
+    sprintf(line0, "%-16s", in_message);
+  }
+  if (strcmp(topic, t_host) == 0)
+  {
+    sprintf(line1, "%-16s", in_message);
+  }
 }
 
-void connectWifi(void)
+void InitWiFi()
 {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  WiFi.begin(ssid, pass);
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -140,102 +146,95 @@ void connectWifi(void)
     delay(1000);
   }
   Serial.println(WiFi.localIP());
-  // The ESP8266 tries to reconnect automatically when the connection is lost
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
 }
 
-void callback(char *topic, byte *payload, unsigned int length)
+void reconnect()
 {
-  String msg;
-  for (unsigned int i = 0; i < length; i++)
+  while (!client.connected())
   {
-    msg = msg + (char)payload[i]; // convert *byte to string
-  }
-  // Serial.println(topic);
-  // Serial.println(msg);
-  if (strcmp(topic, r) == 0)
-  {
-    analogWrite(RED, msg.toInt());
-  }
-  if (strcmp(topic, g) == 0)
-  {
-    analogWrite(GREEN, msg.toInt());
-  }
-  if (strcmp(topic, b) == 0)
-  {
-    analogWrite(BLUE, msg.toInt());
+    if (client.connect(client_id))
+    {
+      Serial.println("MQTT broker connected");
+      client.publish(t_status, "connected");
+      client.subscribe(t_r);
+      client.subscribe(t_g);
+      client.subscribe(t_b);
+      // client.subscribe(t_state);
+      // client.subscribe(t_output);
+      client.subscribe(t_name);
+      client.subscribe(t_host);
+      // client.subscribe(t_message);
+      client.subscribe(t_bcharge);
+      client.subscribe(t_linev);
+      client.subscribe(t_timeleft);
+    }
+    else
+    {
+      Serial.print("failed with state ");
+      Serial.print(client.state());
+      delay(5000);
+      InitWiFi();
+    }
   }
 }
 
-boolean InitMqtt()
+void InitMqtt()
 {
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);
-  Serial.println("Connecting to MQTT broker.....");
-  if (client.connect(client_id))
-  {
-    Serial.println("MQTT broker connected");
-    client.publish(status, "connected");
-  }
-  else
-  {
-    Serial.print("failed with state ");
-    Serial.print(client.state());
-    delay(2000);
-  }
-  return client.connected();
+  reconnect();
 }
 
 void setup()
 {
+  Serial.begin(9600);
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
   pinMode(BLUE, OUTPUT);
-
-  Serial.begin(9600);
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  {
-    Serial.println("SSD1306 allocation failed");
-    for (;;)
-      ;
-  }
-  // display.setRotation(2);
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-  connectWifi();
-
+  delay(500);
+  InitWiFi();
+  delay(500);
   InitMqtt();
-  pinMode(PIRPIN, INPUT);
+  lcd.init();
+  lcd.backlight();
   dht.begin();
+}
 
-  client.subscribe(r);
-  client.subscribe(g);
-  client.subscribe(b);
+void updateDisplay()
+{
+  lcd.setCursor(0, 0);
+  lcd.print(line0);
+  lcd.setCursor(0, 1);
+  lcd.print(line1);
 }
 
 void loop()
 {
-  if (client.connected())
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval)
   {
-    client.loop();
+    previousMillis = currentMillis;
+
+    if (!client.connected())
+    {
+      reconnect();
+    }
     getDht();
-    int pir = getPir();
-    delay(1000);
-    if (pir == 1)
+
+    client.loop();
+
+    if ((messageIncoming == true && millis() - messageStartTime >= 4000) || messageIncoming == false)
     {
-      showInfo();
-      display.clearDisplay();
+      messageIncoming = false;
+      // analogWrite(RED, 0);
+      // analogWrite(GREEN, 0);
+      // analogWrite(BLUE, 0);
+      sprintf(line0, "T: %4s%c T: %3dm", tBuffer, char(223), timeleft);
+      sprintf(line1, "C: %3d%%  L: %3dV", bcharge, linev);
     }
-    else if (pir == 0)
-    {
-      display.display();
-      display.clearDisplay();
-    }
-  }
-  else
-  {
-    InitMqtt();
+    updateDisplay();
   }
 }

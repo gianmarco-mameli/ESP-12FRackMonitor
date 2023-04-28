@@ -1,7 +1,18 @@
 {
     "files.associations": {
+        "**/defaults/**/*": "ansible",
+        "**/tasks/**/*.yml": "ansible",
+        "**/handler/*.yml": "ansible",
+        "**/*_vars/**/*.yml": "ansible",
+        "**/roles/**/*.yml": "ansible",
+        "**/playbooks/**/*.yml": "ansible",
+        "**/*ansible*/**/*.yml": "ansible",
+        "**/vars/**/*.yml": "ansible",
+        "**/inventory/*/*": "ansible",
         "system_error": "cpp",
         "iostream": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "*.tcc": "cpp",
+        "random": "cpp"
     }
 }
