@@ -24,7 +24,7 @@ const char *client_id = "rackmonitor";
 #define BLUE 13
 
 // dht declaration
-#define DHTPIN 10
+#define DHTPIN 2
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 float t = 0;
@@ -39,7 +39,7 @@ char line1[17];
 
 char *message;
 
-const long interval = 200;
+const int interval = 100;
 unsigned long previousMillis = 0;
 
 bool messageIncoming = false;
@@ -64,8 +64,8 @@ const char *t_timeleft = "rpiusb/timeleft";
 
 const char *motion = "rackmotion/motion";
 
-int bcharge;
-int timeleft;
+uint8_t bcharge;
+uint8_t timeleft;
 int linev;
 
 String ip;
@@ -76,7 +76,7 @@ void getDht(void)
   t = dht.readTemperature();
   if (isnan(h) || isnan(t))
   {
-    Serial.println("Failed to read from DHT sensor!");
+    Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
   dtostrf(t, 2, 1, tBuffer);
@@ -139,7 +139,7 @@ void InitWiFi()
 {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
-  Serial.print("Connecting to WiFi ..");
+  Serial.print(F("Connecting to WiFi .."));
   while (WiFi.status() != WL_CONNECTED)
   {
     Serial.print('.');
@@ -156,7 +156,7 @@ void reconnect()
   {
     if (client.connect(client_id))
     {
-      Serial.println("MQTT broker connected");
+      Serial.println(F("MQTT broker connected"));
       client.publish(t_status, "connected");
       client.subscribe(t_r);
       client.subscribe(t_g);
@@ -172,7 +172,7 @@ void reconnect()
     }
     else
     {
-      Serial.print("failed with state ");
+      Serial.print(F("failed with state "));
       Serial.print(client.state());
       delay(5000);
       InitWiFi();
