@@ -3,49 +3,54 @@
 import paho.mqtt.publish as mqtt  # pip install --upgrade paho-mqtt
 import os
 
-hostname = '192.168.1.1'
-port = 1883
-qos=0
-retain=False
-auth=None
+HOSTNAME = '192.168.1.1'
+PORT = 1883
+QOS = 0
+RETAIN = False
+AUTH = None
 
-topic_state = 'rackmonitor/state'
-topic_output = 'rackmonitor/output'
-topic_name = 'rackmonitor/name'
-topic_host = 'rackmonitor/host'
-topic_message = 'rackmonitor/message'
-topic_r = 'rackmonitor/r'
-topic_g = 'rackmonitor/g'
-topic_b = 'rackmonitor/b'
+TOPIC_STATE = 'rackmonitor/state'
+TOPIC_OUTPUT = 'rackmonitor/output'
+TOPIC_NAME = 'rackmonitor/name'
+TOPIC_HOST = 'rackmonitor/host'
+TOPIC_MESSAGE = 'rackmonitor/message'
+TOPIC_R = 'rackmonitor/r'
+TOPIC_G = 'rackmonitor/g'
+TOPIC_B = 'rackmonitor/b'
+TOPIC_COLOR = 'rackmonitor/color'
 
-led_level = 255
+LED_LEVEL = 255
 
-state = os.getenv('SERVICESTATE', '')
-output = os.getenv('SERVICEOUTPUT')
-name = os.getenv('SERVICEDISPLAYNAME')
-host = os.getenv('HOSTDISPLAYNAME')
-if state is None or state == '':
-    state = os.getenv('HOSTSTATE', '')
-    output = os.getenv('HOSTOUTPUT')
-    if state is None or state == '':
-        state = 'unknown'
+STATE = os.getenv('SERVICESTATE', '')
+OUTPUT = os.getenv('SERVICEOUTPUT')
+NAME = os.getenv('SERVICEDISPLAYNAME')
+HOST = os.getenv('HOSTDISPLAYNAME')
+if STATE is None or STATE == '':
+    STATE = os.getenv('HOSTSTATE', '')
+    OUTPUT = os.getenv('HOSTOUTPUT')
+    if STATE is None or STATE == '':
+        STATE = 'unknown'
 
-if state == 'CRITICAL' or state == 'DOWN':
-    r = led_level
-    g = 0
-    b = 0
-if state == 'WARNING':
-    r = led_level
-    g = led_level
-    b = 0
-if state == 'UNKNOWN':
-    r = led_level
-    g = 0
-    b = led_level
-if state == 'OK' or state == 'UP':
-    r = 0
-    g = led_level
-    b = 0
+if STATE == 'CRITICAL' or STATE == 'DOWN':
+    R = LED_LEVEL
+    G = 0
+    B = 0
+    COLOR = 'red'
+if STATE == 'WARNING':
+    R = LED_LEVEL
+    G = LED_LEVEL
+    B = 0
+    COLOR = 'yellow'
+if STATE == 'UNKNOWN':
+    R = LED_LEVEL
+    G = 0
+    B = LED_LEVEL
+    COLOR = 'purple'
+if STATE == 'OK' or STATE == 'UP':
+    R = 0
+    G = LED_LEVEL
+    B = 0
+    COLOR = 'green'
 
 # payload = None
 # try:
@@ -53,13 +58,13 @@ if state == 'OK' or state == 'UP':
 # except:
 #     pass
 
-message = state + " " + name + " on " + host
+MESSAGE = STATE + " " + NAME + " on " + HOST
 
-mqtt.single(topic_state, state, qos=qos, retain=retain, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_message, message, qos=qos, retain=retain, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_output, output, qos=qos, retain=retain, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_name, name, qos=qos, retain=retain, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_host, host, qos=qos, retain=retain, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_r, r, qos=qos, retain=True, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_g, g, qos=qos, retain=True, hostname=hostname, port=port, auth=auth)
-mqtt.single(topic_b, b, qos=qos, retain=True, hostname=hostname, port=port, auth=auth)
+mqtt.single(TOPIC_STATE, STATE, qos=QOS, retain=RETAIN, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_MESSAGE, MESSAGE, qos=QOS, retain=RETAIN, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_OUTPUT, OUTPUT, qos=QOS, retain=RETAIN, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_NAME, NAME, qos=QOS, retain=RETAIN, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_HOST, HOST, qos=QOS, retain=RETAIN, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_R, R, qos=QOS, retain=True, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_G, G, qos=QOS, retain=True, hostname=HOSTNAME, port=PORT, auth=AUTH)
+mqtt.single(TOPIC_B, B, qos=QOS, retain=True, hostname=HOSTNAME, port=PORT, auth=AUTH)

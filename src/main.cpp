@@ -5,7 +5,28 @@
 #include "DHT.h"
 #include "private.h"
 #include <string.h>
+
+#ifdef ST7789
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7789.h>
+#define TFT_DC    D1
+#define TFT_RST   D2
+#define TFT_CS    D8
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+tft.init(240, 240, SPI_MODE2);
+#endif
+
+#ifdef LCD_I2C
 #include <LiquidCrystal_I2C.h>
+// led declaration
+#define RED 14
+#define GREEN 12
+#define BLUE 13
+// lcd declaration
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+char line0[17];
+char line1[17];
+#endif
 
 // wifi
 const char ssid[] = SECRET_SSID;
@@ -18,11 +39,6 @@ const int mqtt_port = 1883;
 
 const char *client_id = "rackmonitor";
 
-// led declaration
-#define RED 14
-#define GREEN 12
-#define BLUE 13
-
 // dht declaration
 #define DHTPIN 2
 #define DHTTYPE DHT11
@@ -31,11 +47,6 @@ float t = 0;
 float h = 0;
 char tBuffer[15];
 char hBuffer[15];
-
-// lcd declaration
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-char line0[17];
-char line1[17];
 
 char *message;
 
@@ -51,6 +62,7 @@ const char *t_hum = "rackmonitor/humidity";
 const char *t_r = "rackmonitor/r";
 const char *t_g = "rackmonitor/g";
 const char *t_b = "rackmonitor/b";
+const char *t_color = "rackmonitor/color";
 const char *t_state = "rackmonitor/state";
 // const char *t_output = "rackmonitor/output";
 const char *t_name = "rackmonitor/name";
@@ -86,6 +98,16 @@ void getDht(void)
   // Serial.println(message);
 }
 
+void lcd_color(int color, int level)
+{
+#ifdef LCD_I2C
+  analogWrite(color, 255 - level);
+#endif
+#ifdef ST7789
+  // analogWrite(color, 255 - level);
+#endif
+}
+
 void callback(char *topic, byte *payload, unsigned int length)
 {
   char in_message[length];
@@ -97,17 +119,21 @@ void callback(char *topic, byte *payload, unsigned int length)
   in_message[i] = '\0';
   messageIncoming = true;
   messageStartTime = millis();
-  if (strcmp(topic, t_r) == 0)
-  {
-    analogWrite(RED, 255 - atoi(in_message));
-  }
-  if (strcmp(topic, t_g) == 0)
-  {
-    analogWrite(GREEN, 255 - atoi(in_message));
-  }
+  // if (strcmp(topic, t_r) == 0)
+  // {
+  //   lcd_color(RED,atoi(in_message));
+  // }
+  // if (strcmp(topic, t_g) == 0)
+  // {
+  //   lcd_color(GREEN,atoi(in_message));
+  // }
+  // if (strcmp(topic, t_b) == 0)
+  // {
+  //   lcd_color(BLUE,atoi(in_message));
+  // }
   if (strcmp(topic, t_b) == 0)
   {
-    analogWrite(BLUE, 255 - atoi(in_message));
+    lcd_color(BLUE,atoi(in_message));
   }
   if (strcmp(topic, t_bcharge) == 0)
   {
